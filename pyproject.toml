@@ -1,0 +1,24 @@
+[project]
+name = "flow-counter"
+version = "0.1.0"
+description = "Counting fish as flow"
+authors = [{ name = "Sevan Brodjian" }]
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+dev = [
+  "torch", "torchvision", "torchaudio",
+  "pytest", "black", "ruff",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+lint.select = ["E", "F", "I"] # pyflakes, pycodestyle, isort
+exclude = ["notebooks"]
+lint.ignore = ["E731"]
