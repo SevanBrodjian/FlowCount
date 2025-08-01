@@ -1,11 +1,13 @@
-import numpy as np
-import cv2
-import random
 import os
-from tensorflow.keras import models, layers
+import random
+
+import cv2
+import numpy as np
+from tensorflow.keras import layers, models
+
 
 def generate_drifting_dots_video(
-    output_path='drifting_dots_X.mp4',
+    output_path="drifting_dots_X.mp4",
     frame_size=(128, 128),
     num_frames=1024,
     fps=24,
@@ -20,7 +22,7 @@ def generate_drifting_dots_video(
 ):
     """
     Generate a video of dots drifting from left to right with some irregularity.
-    
+
     Parameters:
     -----------
     output_path : str
@@ -51,41 +53,43 @@ def generate_drifting_dots_video(
     try:
         height, width = frame_size
         print(f"Creating video with size {width}x{height}")
-        
+
         # Initialize video writer with H.264 codec for MP4
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # MP4 codec
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # MP4 codec
         out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-        
+
         if not out.isOpened():
             raise Exception(f"Failed to create video writer for {output_path}")
-        
+
         # List to store active dots: each dot is [id, x, y, velocity, contrast]
         dots = []
         dot_id_counter = 0  # Unique ID for each dot
-        
+
         # List to store frame pair information
         frame_pairs = []
-        
+
         # Store previous frame's x positions and their indices
         prev_dots = {}  # Initialize prev_dots as empty for frame 0
-        
+
         # Keep track of total completed traversals
         total_completed_traversals = 0
-        
+
         for frame in range(num_frames):
             # Create black frame
             frame_img = np.zeros((height, width, 3), dtype=np.uint8)
-            
+
             # Store current frame's dots and their positions
             current_dots = {}  # {dot_id: x}
-            
+
             # Check if new dot should enter
             if random.random() < entry_probability:
                 # Random y position for new dot
                 margin = dot_size * 3
                 y = random.randint(margin, height - margin)
                 # Random velocity between min_velocity and max_velocity
-                velocity = np.round(random.uniform(min_velocity, max_velocity), decimals=1)
+                velocity = np.round(
+                    random.uniform(min_velocity, max_velocity), decimals=1
+                )
                 # Random contrast between 0.2 and 1.0
                 contrast = random.uniform(0.2, 1.0)
                 # Random brightness between 0.1 and 0.9
@@ -93,39 +97,49 @@ def generate_drifting_dots_video(
                 dot_id = dot_id_counter
                 dot_id_counter += 1
                 dots.append([dot_id, 0, y, velocity, contrast, brightness])
-                print(f"Frame {frame}: New dot {dot_id} created at y={y} with velocity={velocity}, contrast={contrast}, and brightness={brightness}")
-            
+                print(
+                    f"Frame {frame}: New dot {dot_id} created at y={y} with velocity="
+                    f"{velocity}, contrast={contrast}, and brightness={brightness}"
+                )
+
             # Update and draw existing dots
             dots_to_remove = []
             completed_traversals_this_frame = 0
-            
+
             for i, dot in enumerate(dots):
                 dot_id, x, y, velocity, contrast, brightness = dot
-                
+
                 # Add slight vertical irregularity to the motion
                 y += random.uniform(-vertical_irregularity, vertical_irregularity)
                 # Maintain consistent horizontal velocity
                 x += velocity
-                
+
                 # Keep y within bounds
                 y = max(dot_size, min(height - dot_size, y))
-                
+
                 # Draw dot if it's still in frame
                 if x < width:
                     # Apply contrast and brightness to dot color
-                    adjusted_color = tuple(int(c * contrast * brightness) for c in dot_color)
-                    cv2.circle(frame_img, (int(x), int(y)), dot_size, adjusted_color, -1)
+                    adjusted_color = tuple(
+                        int(c * contrast * brightness) for c in dot_color
+                    )
+                    cv2.circle(
+                        frame_img, (int(x), int(y)), dot_size, adjusted_color, -1
+                    )
                     dots[i] = [dot_id, x, y, velocity, contrast, brightness]
                     current_dots[dot_id] = x
-                    print(f"Frame {frame}: Drawing dot {dot_id} at ({int(x)}, {int(y)}) with contrast={contrast} and brightness={brightness}")
+                    print(
+                        f"Frame {frame}: Drawing dot {dot_id} at ({int(x)}, {int(y)}) "
+                        f"with contrast={contrast} and brightness={brightness}"
+                    )
                 else:
                     dots_to_remove.append(i)
                     completed_traversals_this_frame += 1
                     print(f"Frame {frame}: Dot {dot_id} exited at x={x}")
-            
+
             # Calculate total x-displacement
             total_displacement = 0
-            
+
             # Handle dots that were in previous frame
             for dot_id, prev_x in prev_dots.items():
                 if dot_id in current_dots:
@@ -136,56 +150,70 @@ def generate_drifting_dots_video(
                     # Dot exited frame
                     displacement = (width + 1) - prev_x
                     total_displacement += displacement
-            
+
             # Handle new dots that entered this frame
             for dot_id, curr_x in current_dots.items():
                 if dot_id not in prev_dots:
                     # New dot entered frame
                     displacement = curr_x - (-1)
                     total_displacement += displacement
-            
+
             # Store frame pair information
-            frame_pairs.append({
-                'frame1': frame - 1,  # Previous frame
-                'frame2': frame,      # Current frame
-                'dots_frame1': len(prev_dots),
-                'dots_frame2': len(current_dots),
-                'total_displacement': np.round(total_displacement, decimals=1),  # Round to nearest 0.1 using numpy
-                'completed_traversals': total_completed_traversals
-            })
-            
+            frame_pairs.append(
+                {
+                    "frame1": frame - 1,  # Previous frame
+                    "frame2": frame,  # Current frame
+                    "dots_frame1": len(prev_dots),
+                    "dots_frame2": len(current_dots),
+                    "total_displacement": np.round(
+                        total_displacement, decimals=1
+                    ),  # Round to nearest 0.1 using numpy
+                    "completed_traversals": total_completed_traversals,
+                }
+            )
+
             # Update previous frame's dots
             prev_dots = current_dots.copy()
-            
+
             # Remove dots that have exited the frame
             for i in sorted(dots_to_remove, reverse=True):
                 dots.pop(i)
                 total_completed_traversals += 1  # Increment counter when dot is removed
-                print(f"Frame {frame}: Dot completed journey, total completed: {total_completed_traversals}")
-            
+                print(
+                    f"Frame {frame}: Dot completed journey, total completed: "
+                    f"{total_completed_traversals}"
+                )
+
             # Write frame to video
             out.write(frame_img)
             print(f"Frame {frame}: Active dots: {len(dots)}")
-        
+
         # Release video writer
         out.release()
         print(f"Video saved to {output_path}")
-        
+
         # Write frame pair information to file
-        with open(output_path.replace('_X.mp4', '_Y.txt'), 'w') as f:
+        with open(output_path.replace("_X.mp4", "_Y.txt"), "w") as f:
             for pair in frame_pairs:
-                f.write(f"{pair['frame1']} {pair['frame2']} {pair['dots_frame1']} {pair['dots_frame2']} {pair['total_displacement']} {pair['completed_traversals']}\n")
-        print(f"Frame pair information saved to {output_path.replace('_X.mp4', '_Y.txt')}")
-        
+                f.write(
+                    f"{pair['frame1']} {pair['frame2']} {pair['dots_frame1']} "
+                    f"{pair['dots_frame2']} {pair['total_displacement']} "
+                    f"{pair['completed_traversals']}\n"
+                )
+        print(
+            f"Frame pair information saved to {output_path.replace('_X.mp4', '_Y.txt')}"
+        )
+
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         # Clean up video writer if it exists
-        if 'out' in locals() and out is not None:
+        if "out" in locals() and out is not None:
             out.release()
         # Remove partial video file if it exists
         if os.path.exists(output_path):
             os.remove(output_path)
         raise
+
 
 def load_data(video_path, label_path):
     """
@@ -216,16 +244,19 @@ def load_data(video_path, label_path):
     frames = np.array(frames)
 
     # Create pairs of consecutive frames
-    frame_pairs = np.array([frames[i:i+2] for i in range(len(frames)-1)])
+    frame_pairs = np.array([frames[i : i + 2] for i in range(len(frames) - 1)])
 
     labels = []
-    with open(label_path, 'r') as f:
+    with open(label_path, "r") as f:
         for line in f:
             parts = line.strip().split()
-            labels.append(float(parts[4]))  # Assuming the fifth column is the total displacement
+            labels.append(
+                float(parts[4])
+            )  # Assuming the fifth column is the total displacement
     labels = np.array(labels)
 
     return frame_pairs, labels
+
 
 def create_model(input_shape):
     """
@@ -241,18 +272,21 @@ def create_model(input_shape):
     model : tensorflow.keras.Model
         Compiled model.
     """
-    model = models.Sequential([
-        layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
-        layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(64, (3, 3), activation='relu'),
-        layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(64, (3, 3), activation='relu'),
-        layers.Flatten(),
-        layers.Dense(64, activation='relu'),
-        layers.Dense(1)
-    ])
-    model.compile(optimizer='adam', loss='mse')
+    model = models.Sequential(
+        [
+            layers.Conv2D(32, (3, 3), activation="relu", input_shape=input_shape),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation="relu"),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation="relu"),
+            layers.Flatten(),
+            layers.Dense(64, activation="relu"),
+            layers.Dense(1),
+        ]
+    )
+    model.compile(optimizer="adam", loss="mse")
     return model
+
 
 def train_counting_model(data_path, model_save_path):
     """
@@ -265,8 +299,8 @@ def train_counting_model(data_path, model_save_path):
     model_save_path : str
         Path where the trained model will be saved.
     """
-    video_path = os.path.join(data_path, 'drifting_dots_X.mp4')
-    label_path = os.path.join(data_path, 'drifting_dots_Y.txt')
+    video_path = os.path.join(data_path, "drifting_dots_X.mp4")
+    label_path = os.path.join(data_path, "drifting_dots_Y.txt")
 
     frame_pairs, labels = load_data(video_path, label_path)
     input_shape = frame_pairs[0].shape
@@ -277,6 +311,7 @@ def train_counting_model(data_path, model_save_path):
     model.save(model_save_path)
     print(f"Model saved to {model_save_path}")
 
+
 if __name__ == "__main__":
     # Generate video with default parameters
-    generate_drifting_dots_video() 
+    generate_drifting_dots_video()

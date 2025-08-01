@@ -1,0 +1,40 @@
+name: CI
+on:
+  push:      { branches: [main] }
+  pull_request: { branches: [main] }
+
+jobs:
+  format-lint-test:
+    name: Format + Lint + Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: { python-version: [3.11] }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: 
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-dev.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run Black
+        run: black --check .
+
+      - name: Run Ruff
+        run: ruff check .
+
+      - name: Run PyTest
+        run: pytest

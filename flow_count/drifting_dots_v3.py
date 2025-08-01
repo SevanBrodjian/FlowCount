@@ -37,8 +37,8 @@ def generate_drifting_dots_clip(
     vid = cv2.VideoWriter(f"{output_file_base_name}_X.mp4", fourcc, fps, (W, H))
 
     # ─── per-dot state tensors ──────────────────────────────────────────────────
-    pos = torch.empty(0, 2)       # (N, 2)  → x, y
-    vel = torch.empty(0)          # (N,)    → positive x-velocity
+    pos = torch.empty(0, 2)  # (N, 2)  → x, y
+    vel = torch.empty(0)  # (N,)    → positive x-velocity
     size = torch.empty(0, dtype=torch.int32)
     colour = torch.empty(0, 3, dtype=torch.uint8)
     age = torch.empty(0, dtype=torch.int32)  # frames since birth
@@ -58,9 +58,10 @@ def generate_drifting_dots_clip(
                 ),
                 dim=-1,
             )
-            new_vel = torch.rand(n_new) * (
-                dot_velocity_range[1] - dot_velocity_range[0]
-            ) + dot_velocity_range[0]
+            new_vel = (
+                torch.rand(n_new) * (dot_velocity_range[1] - dot_velocity_range[0])
+                + dot_velocity_range[0]
+            )
             new_size = torch.randint(
                 dot_size_range[0], dot_size_range[1] + 1, (n_new,), dtype=torch.int32
             )
@@ -116,7 +117,7 @@ def generate_drifting_dots_clip(
         vid.write(frame.numpy())
 
         # 4. Update physics
-        pos[:, 0] += vel                         # horizontal drift
+        pos[:, 0] += vel  # horizontal drift
         pos[:, 1] += (torch.rand_like(pos[:, 1]) - 0.5) * 2 * vertical_irregularity
         age += 1
 

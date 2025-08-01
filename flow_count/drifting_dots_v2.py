@@ -1,10 +1,12 @@
+import random
+
 import cv2
 import numpy as np
-import random
 from tqdm import tqdm
 
+
 def generate_drifting_dots_video(
-    output_file_base_name='drifting_dots',
+    output_file_base_name="drifting_dots",
     frame_size=(128, 128),
     num_frames=1024,
     fps=24,
@@ -13,14 +15,16 @@ def generate_drifting_dots_video(
     dot_color=((64, 255), (64, 255), (64, 255)),
     dot_velocity=(1.0, 4.0),
     vertical_irregularity=0.3,
-    seed=42  # default seed for reproducibility
+    seed=42,  # default seed for reproducibility
 ):
     random.seed(seed)
     np.random.seed(seed)
 
     width, height = frame_size
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out_X = cv2.VideoWriter(f'{output_file_base_name}_X.mp4', fourcc, fps, (width, height))
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out_X = cv2.VideoWriter(
+        f"{output_file_base_name}_X.mp4", fourcc, fps, (width, height)
+    )
 
     class Dot:
         def __init__(self):
@@ -68,15 +72,26 @@ def generate_drifting_dots_video(
         if t > 0:
             prev_count = len(previous_frame_dots)
             curr_count = len(current_frame_dots)
-            displacement = sum([curr - prev for curr, prev in zip(current_frame_dots, previous_frame_dots[:len(current_frame_dots)])])
-            y_data.append((t - 1, t, prev_count, curr_count, round(displacement, 2), cross_count))
+            displacement = sum(
+                [
+                    curr - prev
+                    for curr, prev in zip(
+                        current_frame_dots,
+                        previous_frame_dots[: len(current_frame_dots)],
+                    )
+                ]
+            )
+            y_data.append(
+                (t - 1, t, prev_count, curr_count, round(displacement, 2), cross_count)
+            )
 
         previous_frame_dots = current_frame_dots
 
     out_X.release()
 
-    with open(f'{output_file_base_name}_Y.txt', 'w') as f:
+    with open(f"{output_file_base_name}_Y.txt", "w") as f:
         for row in y_data:
-            f.write(' '.join(map(str, row)) + '\n')
+            f.write(" ".join(map(str, row)) + "\n")
+
 
 generate_drifting_dots_video()

@@ -10,6 +10,7 @@ Output: <out>.pt containing
 """
 
 import argparse
+
 import cv2
 import torch
 from tqdm import trange
@@ -29,18 +30,18 @@ def make_dataset(
     torch.manual_seed(seed)
 
     W, H = frame_size
-    T = num_pairs + 1                                # stored frames
+    T = num_pairs + 1  # stored frames
 
     # ─── growable per-dot state ───────────────────────────────────────────────
-    pos = torch.empty(0, 2)                          # (N, 2) x,y
-    vel = torch.empty(0)                             # (N,)   +x velocity
-    size = torch.empty(0, dtype=torch.int32)         # (N,)
-    colour = torch.empty(0, 3, dtype=torch.uint8)    # (N, 3)
-    age = torch.empty(0, dtype=torch.int32)          # (N,)
+    pos = torch.empty(0, 2)  # (N, 2) x,y
+    vel = torch.empty(0)  # (N,)   +x velocity
+    size = torch.empty(0, dtype=torch.int32)  # (N,)
+    colour = torch.empty(0, 3, dtype=torch.uint8)  # (N, 3)
+    age = torch.empty(0, dtype=torch.int32)  # (N,)
 
     # ─── preallocate dataset storage ──────────────────────────────────────────
     frames = torch.empty(T, 3, H, W, dtype=torch.uint8)
-    disp   = torch.empty(T - 1, dtype=torch.int32)
+    disp = torch.empty(T - 1, dtype=torch.int32)
 
     # ─── helper functions ─────────────────────────────────────────────────────
     def spawn():
@@ -52,22 +53,25 @@ def make_dataset(
             # velocity (+x)
             new_vel = torch.rand(1) * (vel_range[1] - vel_range[0]) + vel_range[0]
             # size
-            new_size = torch.randint(size_range[0], size_range[1] + 1,
-                                      (1,), dtype=torch.int32)
+            new_size = torch.randint(
+                size_range[0], size_range[1] + 1, (1,), dtype=torch.int32
+            )
             # colour tensor (3,) uint8   — build from tensors, not ints
-            new_colour = torch.cat([
-                torch.randint(lo, hi + 1, (1,), dtype=torch.uint8)
-                for lo, hi in colour_range
-            ])
+            new_colour = torch.cat(
+                [
+                    torch.randint(lo, hi + 1, (1,), dtype=torch.uint8)
+                    for lo, hi in colour_range
+                ]
+            )
             # age
             new_age = torch.zeros(1, dtype=torch.int32)
 
             # concatenate to existing state
-            pos    = torch.cat([pos, new_pos], dim=0)
-            vel    = torch.cat([vel, new_vel], dim=0)
-            size   = torch.cat([size, new_size], dim=0)
+            pos = torch.cat([pos, new_pos], dim=0)
+            vel = torch.cat([vel, new_vel], dim=0)
+            size = torch.cat([size, new_size], dim=0)
             colour = torch.cat([colour, new_colour.unsqueeze(0)], dim=0)
-            age    = torch.cat([age, new_age], dim=0)
+            age = torch.cat([age, new_age], dim=0)
 
     def cull():
         """Remove dots whose x >= W (off the right edge)."""
@@ -99,8 +103,8 @@ def make_dataset(
                 )
 
         # 3) BGR→RGB with .copy() to ensure positive strides, then CHW
-        frame_rgb = frame_bgr[:, :, ::-1].copy()           # now contiguous
-        frame_t   = torch.from_numpy(frame_rgb).permute(2, 0, 1)  # (3,H,W)
+        frame_rgb = frame_bgr[:, :, ::-1].copy()  # now contiguous
+        frame_t = torch.from_numpy(frame_rgb).permute(2, 0, 1)  # (3,H,W)
         frames[t].copy_(frame_t)
 
         # 4) Physics update
@@ -119,9 +123,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Generate drifting-dots dataset for PyTorch."
     )
-    parser.add_argument("--num_pairs", type=int, required=True,
-                        help="Number of (frameₜ, frameₜ₊₁) pairs")
-    parser.add_argument("--out", default="drifting_dots_128",
-                        help="Base name for the output .pt file")
+    parser.add_argument(
+        "--num_pairs",
+        type=int,
+        required=True,
+        help="Number of (frameₜ, frameₜ₊₁) pairs",
+    )
+    parser.add_argument(
+        "--out", default="drifting_dots_128", help="Base name for the output .pt file"
+    )
     args = parser.parse_args()
     make_dataset(args.num_pairs, args.out)

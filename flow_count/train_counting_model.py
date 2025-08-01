@@ -1,8 +1,9 @@
-import numpy as np
-import cv2
 import os
-import tensorflow as tf
+
+import cv2
+import numpy as np
 from tensorflow.keras import layers, models
+
 
 def load_data(video_path, label_path):
     """
@@ -33,16 +34,19 @@ def load_data(video_path, label_path):
     frames = np.array(frames)
 
     # Create pairs of consecutive frames
-    frame_pairs = np.array([frames[i:i+2] for i in range(len(frames)-1)])
+    frame_pairs = np.array([frames[i : i + 2] for i in range(len(frames) - 1)])
 
     labels = []
-    with open(label_path, 'r') as f:
+    with open(label_path, "r") as f:
         for line in f:
             parts = line.strip().split()
-            labels.append(float(parts[4]))  # Assuming the fifth column is the total displacement
+            labels.append(
+                float(parts[4])
+            )  # Assuming the fifth column is the total displacement
     labels = np.array(labels)
 
     return frame_pairs, labels
+
 
 def create_model(input_shape):
     """
@@ -58,18 +62,21 @@ def create_model(input_shape):
     model : tensorflow.keras.Model
         Compiled model.
     """
-    model = models.Sequential([
-        layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
-        layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(64, (3, 3), activation='relu'),
-        layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(64, (3, 3), activation='relu'),
-        layers.Flatten(),
-        layers.Dense(64, activation='relu'),
-        layers.Dense(1)
-    ])
-    model.compile(optimizer='adam', loss='mse')
+    model = models.Sequential(
+        [
+            layers.Conv2D(32, (3, 3), activation="relu", input_shape=input_shape),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation="relu"),
+            layers.MaxPooling2D((2, 2)),
+            layers.Conv2D(64, (3, 3), activation="relu"),
+            layers.Flatten(),
+            layers.Dense(64, activation="relu"),
+            layers.Dense(1),
+        ]
+    )
+    model.compile(optimizer="adam", loss="mse")
     return model
+
 
 def train_counting_model(data_path, model_save_path):
     """
@@ -82,8 +89,8 @@ def train_counting_model(data_path, model_save_path):
     model_save_path : str
         Path where the trained model will be saved.
     """
-    video_path = os.path.join(data_path, 'drifting_dots_X.mp4')
-    label_path = os.path.join(data_path, 'drifting_dots_Y.txt')
+    video_path = os.path.join(data_path, "drifting_dots_X.mp4")
+    label_path = os.path.join(data_path, "drifting_dots_Y.txt")
 
     frame_pairs, labels = load_data(video_path, label_path)
     input_shape = frame_pairs[0].shape
@@ -94,6 +101,7 @@ def train_counting_model(data_path, model_save_path):
     model.save(model_save_path)
     print(f"Model saved to {model_save_path}")
 
+
 if __name__ == "__main__":
     # Example usage
-    train_counting_model(data_path='./data', model_save_path='./model') 
+    train_counting_model(data_path="./data", model_save_path="./model")
